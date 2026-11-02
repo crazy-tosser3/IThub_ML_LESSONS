@@ -76,6 +76,42 @@ int main(int argc, char** argv) {
             cv::addWeighted(imageROI, 0.5, watermark, 0.5, 0, imageROI);
         }
 
+
+        std::time_t now = std::time(nullptr);
+        std::tm* localTime = std::localtime(&now);
+
+        char timeText[16];
+        std::strftime(timeText, sizeof(timeText), "%H:%M:%S", localTime);
+
+        int fontFace = cv::FONT_HERSHEY_SIMPLEX;
+        double fontScale = 1.0;
+        int thickness = 2;
+
+        int textX = 20;
+        int textY = 40;
+
+        cv::putText(
+            frame,
+            timeText,
+            cv::Point(textX + 2, textY + 2),
+            fontFace,
+            fontScale,
+            cv::Scalar(0, 0, 0),
+            thickness + 3,
+            cv::LINE_AA
+        );
+
+        cv::putText(
+            frame,
+            timeText,
+            cv::Point(textX, textY),
+            fontFace,
+            fontScale,
+            cv::Scalar(255, 255, 255),
+            thickness,
+            cv::LINE_AA
+        );
+
         cv::imshow("TaskONE", frame);
 
         if (cv::waitKey(30) == 'q') {
