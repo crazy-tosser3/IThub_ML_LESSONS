@@ -1,4 +1,6 @@
 #include <iostream>
+#include <string>
+#include <vector>
 #include <opencv2/opencv.hpp>
 
 int main() {
@@ -12,10 +14,15 @@ int main() {
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
 
 
-    const std::string detection_path =
-        "../face_detection_yunet_2026may.onnx";
-    const std::string recognition_path =
-        "../face_recognition_sface_2021dec_int8.onnx";
+    const std::string detection_path = "../face_detection_yunet_2026may.onnx";
+    const std::string emotion_model_path = "../emotion_model_duhn.onnx";
+
+    const std::vector<std::string> EMOTIONS =
+        {"anger", "contempt", "disgust", "fear", "happy", "neutral", "sad", "surprise"};
+
+    cv::dnn::Net emotionNet = cv::dnn::readNetFromONNX(emotion_model_path);
+    emotionNet.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+    emotionNet.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
     cv::Mat frame;
     cap >> frame;
@@ -25,11 +32,12 @@ int main() {
         return -1;
     }
 
-
-
     try {
         cv::Mat faces;
         int frameNumber = 0;
+
+        std::vector<int> emoLabels;
+        std::vector<double> emoConfs;
 
         cv::Ptr<cv::FaceDetectorYN> detector =
             cv::FaceDetectorYN::create(
@@ -49,6 +57,40 @@ int main() {
             if (frameNumber % 3 == 0) {
                 detector->setInputSize(frame.size());
                 detector->detect(frame, faces);
+
+                emoLabels.assign(faces.rows, -1);
+                emoConfs.assign(faces.rows, 0.0);
+
+                for (int i = 0; i < faces.rows; ++i) {
+                    const float* f = faces.ptr<float>(i);
+
+                    cv::Rect roi(
+                        cvRound(f[0]), cvRound(f[1]),
+                        cvRound(f[2]), cvRound(f[3])
+                    );
+                    roi &= cv::Rect(0, 0, frame.cols, frame.rows);
+                    if (roi.width < 8 || roi.height < 8) continue;
+
+                    cv::Mat face;
+                    cv::resize(frame(roi), face, cv::Size(192, 108));
+                    face.convertTo(face, CV_32FC3);
+                    cv::cvtColor(face, face, cv::COLOR_BGR2RGB);
+
+                    int dims[] = {1, face.rows, face.cols, 3};
+                    cv::Mat blob(4, dims, CV_32F, face.data);  // заголовок, без копии
+
+                    emotionNet.setInput(blob);
+                    cv::Mat probs = emotionNet.forward().reshape(1, 1);  // 1x8
+
+                    cv::Point cls;
+                    double conf;
+                    cv::minMaxLoc(probs, nullptr, &conf, nullptr, &cls);
+
+                    if (cls.x >= 0 && cls.x < static_cast<int>(EMOTIONS.size())) {
+                        emoLabels[i] = cls.x;
+                        emoConfs[i] = conf;
+                    }
+                }
             }
 
             ++frameNumber;
@@ -79,6 +121,18 @@ int main() {
                     cv::Scalar(0, 255, 0),
                     2
                 );
+
+                if (emoLabels[i] >= 0) {
+                    cv::putText(
+                        frame,
+                        cv::format("%s %.0f%%", EMOTIONS[emoLabels[i]].c_str(), emoConfs[i] * 100),
+                        cv::Point(faceBox.x, faceBox.y + faceBox.height + 20),
+                        cv::FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        cv::Scalar(0, 255, 255),
+                        2
+                    );
+                }
             }
 
             cv::imshow("Face detection", frame);
