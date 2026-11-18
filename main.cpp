@@ -1,8 +1,6 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
-// Добавляет 10% к значениям указанного цветового канала
-// (в BGR-формате OpenCV: 0 — синий, 1 — зелёный, 2 — красный)
 void addChannel10Percent(cv::Mat& image, int channel) {
     for (int y = 0; y < image.rows; ++y) {
         for (int x = 0; x < image.cols; ++x) {
@@ -12,7 +10,6 @@ void addChannel10Percent(cv::Mat& image, int channel) {
     }
 }
 
-// Поворачивает изображение на 180 градусов (вверх тормашками)
 cv::Mat rotate180(const cv::Mat& image) {
     cv::Mat rotated;
     cv::rotate(image, rotated, cv::ROTATE_180);
@@ -28,8 +25,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Коды клавиш (ASCII): r/R = 114/82 — красный, g/G = 103/71 — зелёный,
-    // b/B = 98/66 — синий, t/T = 116/84 — поворот, ESC = 27 — выход
     bool addRed = false;
     bool addGreen = false;
     bool addBlue = false;
