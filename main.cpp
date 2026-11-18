@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
               << "  T — повернуть изображение на 180°\n"
               << "  ESC — выход\n";
 
-    cv::namedWindow("Image");
+    cv::namedWindow("ImagE");
     while (true) {
         cv::Mat result = original.clone();
 
